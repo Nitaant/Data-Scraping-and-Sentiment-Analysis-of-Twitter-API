@@ -1,0 +1,251 @@
+---
+title: Home Work 3 (Case Study 1) – Collecting, Manipulating and Blending Data from
+  Twitter
+author: "DS501 - Introduction to Data Science"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+## Introduction
+
+-   Go to <https://dev.twitter.com/apps/new> and log in, if necessary
+-   Enter your Application Name, Description and your website address.
+-   Set the callback URL <http://127.0.0.1:1410>
+-   Accept the TOS, and solve the CAPTCHA.
+-   Submit the form by clicking the Create your Twitter Application
+-   Copy the consumer key (API key) and consumer secret from the screen into your application
+-   Download twitter package from <https://github.com/geoffjentry/twitteR>
+
+## Problem 1: Sampling Twitter Data with Streaming API about a certain topic
+
+-   Select a topic that you are interested in, for example, "#WPI" or "#DataScience"
+-   Use Twitter Streaming API to sample a collection of tweets about this topic in real time. (It would be recommended that the number of tweets should be larger than 50, but smaller than 500.
+-   Store the tweets you downloaded into a local file (csv file)
+
+```{r}
+consumerKey = "FS8KA9WE0FbnWDODHbf4zyc3u"
+consumerSecret = "Nrl4cyaJWSNWR2XnGxOF2tkUoNN8fmDgs1xkdGK54VLkJo3QGo"
+accessToken = "905838785778380801-YcSvHOOS5hjhFRN9VA4BRIzcJnLA0Sw"
+accessTokenSecret = "XTEdD7fUELBA8b7bYeTLzpWyUPZPaiqErvP7IFYkuQhB6"
+```
+
+```{r}
+library(twitteR)
+library(stringr)
+setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
+tweets = searchTwitter('#elonmusk', n=500)
+tweets_df = twListToDF(tweets)
+```
+
+Report some statistics about the tweets you collected
+
+-   The topic of interest: <elonmusk>
+-   The total number of tweets collected: \< 500 \>
+
+## Problem 2: Analyzing Tweets and Tweet Entities with Frequency Analysis
+
+**1. Word Count:**
+
+-   Use the tweets you collected in Problem 1, and compute the frequencies of the words being used in these tweets.
+
+```{r}
+# Your R code here
+  install.packages("tidytext")
+  install.packages("dplyr")
+  
+  library(tidytext)
+  library(dplyr)
+  
+  write.csv(tweets_df, file = "tweets.csv", row.names = FALSE)
+  
+  #reading from the csv file
+  tweet1<- read.csv("tweets.csv")
+  
+  #separating each word in the tweet
+  tweets_words <- tweet1 %>%
+  unnest_tokens(word,text)
+  
+  #adding new stop words 
+  my_stop_words <- data.frame(word = c("rt","https","t.co"), lexicon = "my_stop_words")
+  
+  #appending added stop words with the original list
+  stop_words <- bind_rows(stop_words,my_stop_words)
+  
+  #storing the words left after removing the stop words and sorting them
+  top_freq <-tweets_words %>%
+    anti_join(stop_words,by = "word") %>%
+    count(word, sort = TRUE) 
+```
+
+-   Display a table of the top 30 words (ONLY) with their counts
+
+```{r paged.print=FALSE}
+
+#printing the top 30 stop words
+  top_thirty <- top_freq %>%
+    head(30)
+
+  top_thirty
+```
+
+**2. Find the most popular tweets in your collection of tweets**
+
+-   Please display a table of the top 10 tweets (ONLY) that are the most popular among your collection, i.e., the tweets with the largest number of retweet counts.
+
+```{r}
+    #View(tweetsDF)
+    sort_tweets <- tweets[order(-tweet1$retweetCount)]
+    top_ten <- head(sort_tweets,10)
+    top_ten
+```
+
+**3. Find the most popular Tweet Entities in your collection of tweets**
+
+Please display a table of the top 10 hashtags (ONLY), top 10 user mentions (ONLY) that are the most popular in your collection of tweets.
+
+```{r}
+# Your R code here
+  install.packages("tidyverse")
+  library(tidyverse)
+  #selecting all the words that have # at their start
+  hashtags <- tweet1 %>%
+  mutate(hashtag = str_extract_all(text, "#\\S+")) %>%
+  select(hashtag) %>%
+  unnest()
+  
+  #counting the number of times each hashtag is used and sorting it.
+  hashtag_counts <- hashtags %>%
+    count(hashtag,sort = TRUE)
+
+  #storing the top 10 hashtags
+  top_hashtags <- hashtag_counts %>%
+    head(10)
+  
+  #selecing all the words that have @ at their start
+  mentions <-tweet1%>%
+    mutate(mentions = str_extract_all(text, "@\\S+")) %>%
+    select(mentions) %>%
+    unnest()
+  
+  #counting the number of times each mention is used and sorting it
+  mentions_counts <- mentions %>%
+    count(mentions,sort = TRUE)
+  
+  #storing the top 10 mentions
+  top_mentions <- mentions_counts %>%
+    head(10)
+  
+  #printing top 10 hashtags
+  top_hashtags
+ 
+```
+
+```{r}
+#printing top 10 mentions
+ top_mentions
+```
+
+## Problem 3: Getting any 20 friends and any 20 followers of a popular user in twitter
+
+-   Choose a twitter user who has many followers, such as @hadleywickham.
+-   Get the list of friends and followers of the twitter user.
+-   Display 20 out of the followers, Display their ID numbers and screen names in a table.
+-   Display 20 out of the friends (if the user has more than 20 friends), Display their ID numbers and screen names in a table.
+-   Compute the mutual friends within the two groups, i.e., the users who are in both friend list and follower list, Display their ID numbers and screen names in a table
+
+## Problem 4 (Optional): Explore the data
+
+Run some additional experiments with your data to gain familiarity with the twitter data and twitter API \`\`
+
+```{r paged.print=FALSE}
+install.packages("sentimentr")
+library(sentimentr)
+tweet <- tweet1$text
+sentiment_scores <- sentiment_by(tweet)
+sentiment_scores
+summary(sentiment_scores$ave_sentiment)
+
+
+```
+
+```{r}
+summary(sentiment_scores$ave_sentiment)
+
+
+```
+
+In the summary most of the mean of the tweets is neutral, the maximum value is 0.8 which is also very close to neutral and minimum value which is -0.73.
+
+```{r}
+library(ggplot2)
+qplot(sentiment_scores$ave_sentiment,   geom="histogram",binwidth=0.1,main="Review Sentiment Histogram")
+
+```
+
+The Y axis of the graph is the count or the number of tweets and the X axis is the sentiment score.
+
+Seeing this distribution we can say that majority of the tweets have been neutral followed by positive tweets and the number of negative tweets being the least.
+
+## Done
+
+All set!
+
+```{r}
+
+```
+
+**What do you need to submit?**
+
+Report: please prepare a document, preferably using RMarkdown (less than 10 pages) to report what you found in the data.
+
+-   **What data you collected?**
+
+    I collected the data from #elonmusk and generated 500 tweets from this topic.
+
+-   **Why this topic is interesting or important to you? (Motivations)**
+
+    Considering the recent layoffs and the controversies Elon Musk gets himself into, I thought it would help me find interesting mentions and hashtags as well as an interesting histogram when sentiment analysis is done.
+
+-   **How did you analyze the data?**
+
+    I used libraries such as twitteR, stringR, dplyr, tidyverse and sentimentr in the case study.
+
+    -   In the first problem, I used dplyr and tidytext.
+
+    -   I used the functions write.csv to generate a csv from the List created by twitterAPI. I used unnest tokens to separate the words in the text column of the csv which included the tweets and removed the stop words from it. I created a new column "word" in which the remaining words were stored. Used the count function to sort the words and print the top 30.
+
+    -   In my second problem, I used tidyverse.
+
+    -   I created to "hashtags" and "mentions" dataframes which extracted all the words with \# and \@ in them and counted them. After which I printed the top ten in both parameters.
+
+    -   Third problem was skipped.
+
+    -   Upon doing prior research, third problem could have been easily solved using the rtweet library. There are functions such as get_followers() and lookup_users which can fetch the data in just a couple of lines of code.
+
+    -   My initial idea for problem 3 was to identify the common topics between the mutual followers and printing an histogram of the most common topics.
+
+    -   In fourth problem, I used sentimentr.
+
+    -   The reason I picked #elonmusk was generate a variety of sentiments considering all the controversies he has been. I also generated a histogram to display the distribution of those sentiments.
+
+-   **What did you find in the data? (please include figures or tables in the report)**
+
+    -   The tables and histograms have already been included above in the document.
+
+    -   The most frequent words include elonmusk himself, some nft companies, some crypto currencies as well as his products and some words in other languages.
+
+    -   The most popular tweets seem to be bitcoin scams which is very alarming as twitter has been very strict with fishy or controversial tweets.
+
+    -   Similarly, with the hashtags and mentions, most of them are crypto and nft companies and some words in other languages that I have very little idea about. It shows how diverse the audience of elon musk is which should have been obvious considering how large of a following he has .
+
+    -   I also find out that the average sentiment in the tweets seem to be neutral with the mean being 0.06 with a distribution of more positive tweets compared with negative ones.
+
+    -   I think, if were able to take a larger number of tweets, the distribution would have varied largely if the data received would have been through the timeline.
+
+    -   If done so, there would have the high frequency words would have been the work Elon Musk has actually done instead of the random scam tweets that have been using #elonmusk to bait innocent people.
+
+Please create an R Markdown PDF including the R code in a report format.
+
+How to submit: - Submit on Course Webpage on Canvas as a PDF file ONLY. Do not email it to me.
